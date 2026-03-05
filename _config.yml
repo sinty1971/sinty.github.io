@@ -1,3 +1,4 @@
-theme: jekyll-theme-minimal
+# _config.yml
+remote_theme: "jekyll/minima@1e8a445"
 title: metric labs
 description: Laboratory for web-based instrument control and real-time metrics.
