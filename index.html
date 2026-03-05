@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>metric-labs | Instrument Control Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        .hero-section {
+            padding: 80px 0 60px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            margin-bottom: 50px;
+        }
+        .lab-title {
+            font-weight: 800;
+            letter-spacing: -1px;
+            font-size: 2.5rem;
+        }
+        .project-card {
+            border: none;
+            border-radius: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            background: white;
+            height: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        }
+        .btn-enter {
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 600;
+        }
+        footer {
+            margin-top: 100px;
+            padding: 40px 0;
+            border-top: 1px solid #e9ecef;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hero-section">
+        <div class="container text-center">
+            <h1 class="lab-title mb-3">metric-labs</h1>
+            <p class="lead text-secondary mx-auto" style="max-width: 700px;">
+                Laboratory for web-based instrument control and real-time metrics.
+            </p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="card project-card p-4">
+                    <div class="mb-3">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">IoT / BLE</span>
+                    </div>
+                    <h3 class="h4 fw-bold">Water Auto-Metering</h3>
+                    <p class="text-secondary flex-grow-1">
+                        A&D製電子天秤とESP32を連携させ、Bluetooth経由でリアルタイムに水の重量を計測・制御するシステム。
+                    </p>
+                    <div class="mt-3">
+                        <a href="./water-metering/index.html" class="btn btn-outline-primary btn-enter w-100">
+                            Open Project
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card project-card p-4 border-dashed bg-light border-2 d-flex align-items-center justify-content-center text-center" style="border-style: dashed !important;">
+                    <div>
+                        <p class="text-muted mb-0">Next project coming soon...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="text-center">
+        <div class="container">
+            <p class="mb-0 small">&copy; 2026 metric-labs</p>
+            <p class="small mt-2">
+                <a href="https://github.com/YourGitHubUsername/metric-labs" class="text-decoration-none text-muted">View on GitHub</a>
+            </p>
+        </div>
+    </footer>
+
+</body>
+</html>
