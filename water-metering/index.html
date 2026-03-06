@@ -68,7 +68,8 @@
         document.getElementById('btnConnect').onclick = async () => {
             try {
                 const device = await navigator.bluetooth.requestDevice({
-                    filters: [{ services: [UUID_SERVICE] }]
+                    filters: [{ namePrefix: 'NimBLE_GATT' }],
+                    optionalServices: [UUID_SERVICE]
                 });
 
                 const server = await device.gatt.connect();
