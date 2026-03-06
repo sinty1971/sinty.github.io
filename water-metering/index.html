@@ -63,48 +63,96 @@
         const UUID_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';  // NUS Service
         const UUID_WEIGHT  = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';  // NUS TX: デバイス→ブラウザ (Notify)
         const UUID_COMMAND = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';  // NUS RX: ブラウザ→デバイス (Write)
-        let bleCharCommand;
+
+        let bleDevice       = null;
+        let bleCharCommand  = null;
+        let reconnectTimer  = null;
+        let isReconnecting  = false;
+
+        async function connectToDevice(device) {
+            const server  = await device.gatt.connect();
+            const service = await server.getPrimaryService(UUID_SERVICE);
+
+            const charWeight = await service.getCharacteristic(UUID_WEIGHT);
+            await charWeight.startNotifications();
+            charWeight.oncharacteristicvaluechanged = (e) => {
+                const str   = new TextDecoder().decode(e.target.value);
+                const match = str.match(/[+|\-]?\d+\.\d+/);
+                if (match) document.getElementById('valDisplay').innerText = match[0];
+            };
+
+            bleCharCommand = await service.getCharacteristic(UUID_COMMAND);
+            updateUI('connected');
+        }
+
+        async function onDisconnected() {
+            bleCharCommand = null;
+            if (!bleDevice) return;
+            updateUI('reconnecting');
+            // 指数バックオフで再接続 (1s → 2s → 4s → 8s → 最大8s)
+            let delay = 1000;
+            while (bleDevice) {
+                await new Promise(r => { reconnectTimer = setTimeout(r, delay); });
+                try {
+                    await connectToDevice(bleDevice);
+                    return; // 再接続成功
+                } catch (e) {
+                    console.warn('Reconnect failed, retrying...', e);
+                    delay = Math.min(delay * 2, 8000);
+                }
+            }
+        }
 
         document.getElementById('btnConnect').onclick = async () => {
             try {
-                const device = await navigator.bluetooth.requestDevice({
+                bleDevice = await navigator.bluetooth.requestDevice({
                     filters: [{ namePrefix: 'NimBLE_GATT' }],
                     optionalServices: [UUID_SERVICE]
                 });
-
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService(UUID_SERVICE);
-                
-                // 重量の通知購読
-                const charWeight = await service.getCharacteristic(UUID_WEIGHT);
-                await charWeight.startNotifications();
-                charWeight.oncharacteristicvaluechanged = (e) => {
-                    const str = new TextDecoder().decode(e.target.value);
-                    const match = str.match(/[+|-]?\d+\.\d+/);
-                    if (match) document.getElementById('valDisplay').innerText = match[0];
-                };
-
-                // コマンド用送信
-                bleCharCommand = await service.getCharacteristic(UUID_COMMAND);
-
-                updateUI(true);
+                bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                await connectToDevice(bleDevice);
             } catch (err) {
                 console.error(err);
-                alert("Connection failed. Check if Bluetooth is enabled.");
+                alert('Connection failed. Check if Bluetooth is enabled.');
             }
         };
 
-        function updateUI(connected) {
-            document.getElementById('connStatus').innerText = connected ? 'Connected' : 'Disconnected';
-            document.getElementById('connStatus').className = `badge rounded-pill ${connected ? 'bg-success' : 'bg-light text-dark border'}`;
-            document.getElementById('btnConnect').style.display = connected ? 'none' : 'block';
-            document.getElementById('btnZero').disabled = !connected;
-            document.getElementById('btnTare').disabled = !connected;
+        document.getElementById('btnConnect').addEventListener('dblclick', () => {
+            // 手動切断: ダブルクリックで切断してデバイス選択に戻る
+            if (bleDevice) {
+                bleDevice.removeEventListener('gattserverdisconnected', onDisconnected);
+                if (bleDevice.gatt.connected) bleDevice.gatt.disconnect();
+                bleDevice = null;
+                bleCharCommand = null;
+                clearTimeout(reconnectTimer);
+                updateUI('disconnected');
+            }
+        });
+
+        function updateUI(state) {
+            const status  = document.getElementById('connStatus');
+            const btnConn = document.getElementById('btnConnect');
+            if (state === 'connected') {
+                status.innerText   = 'Connected';
+                status.className   = 'badge rounded-pill bg-success';
+                btnConn.style.display = 'none';
+            } else if (state === 'reconnecting') {
+                status.innerText   = 'Reconnecting...';
+                status.className   = 'badge rounded-pill bg-warning text-dark';
+                btnConn.style.display = 'none';
+            } else {
+                status.innerText   = 'Disconnected';
+                status.className   = 'badge rounded-pill bg-light text-dark border';
+                btnConn.style.display = 'block';
+            }
+            const ok = (state === 'connected');
+            document.getElementById('btnZero').disabled = !ok;
+            document.getElementById('btnTare').disabled = !ok;
         }
 
         async function send(cmd) {
             if (bleCharCommand) {
-                await bleCharCommand.writeValue(new TextEncoder().encode(cmd + "\r\n"));
+                await bleCharCommand.writeValue(new TextEncoder().encode(cmd + '\r\n'));
             }
         }
 
