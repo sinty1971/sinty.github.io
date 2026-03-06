@@ -68,6 +68,7 @@
         let bleDevice       = null;
         let bleCharCommand  = null;
         let reconnectTimer  = null;
+        let keepaliveTimer  = null;
         let wakeLock        = null;
 
         /* Screen Wake Lock: スクリーンオフによる BLE スロットルを防ぐ */
@@ -108,7 +109,23 @@
             };
 
             bleCharCommand = await service.getCharacteristic(UUID_COMMAND);
-            await acquireWakeLock(); // スクリーンオフによる BLE スロットルを防ぐ
+            await acquireWakeLock();
+
+            /*
+             * JS側 keepalive: writeValueWithResponse() で 2 秒ごと書き込む。
+             * Central (Chrome/Windows) が ATT Write Request を送信し
+             * ESP32 が Write Response を返すため、両側の
+             * supervision timeout タイマーがリセットされる。
+             */
+            if (keepaliveTimer) clearInterval(keepaliveTimer);
+            const keepalivePkt = new TextEncoder().encode('K\r\n');
+            keepaliveTimer = setInterval(async () => {
+                if (!bleCharCommand || !bleDevice?.gatt.connected) return;
+                try {
+                    await bleCharCommand.writeValueWithResponse(keepalivePkt);
+                } catch (e) { /* 再接続中は無視 */ }
+            }, 2000);
+
             updateUI('connected');
         }
 
@@ -151,6 +168,8 @@
                 bleDevice = null;
                 bleCharCommand = null;
                 clearTimeout(reconnectTimer);
+                clearInterval(keepaliveTimer);
+                keepaliveTimer = null;
                 releaseWakeLock();
                 updateUI('disconnected');
             }
