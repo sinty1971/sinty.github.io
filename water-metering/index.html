@@ -122,9 +122,14 @@
             keepaliveTimer = setInterval(async () => {
                 if (!bleCharCommand || !bleDevice?.gatt.connected) return;
                 try {
-                    await bleCharCommand.writeValueWithResponse(keepalivePkt);
-                } catch (e) { /* 再接続中は無視 */ }
-            }, 2000);
+                    /* writeValueWithoutResponse: ATT層の応答不要。
+                     * Windows BTスタックのキュー遅延なく、即座にラジオパケットを送信する。
+                     * supervision timer リセットには LL レベルの送信で十分。 */
+                    await bleCharCommand.writeValueWithoutResponse(keepalivePkt);
+                } catch (e) {
+                    console.warn('BLE keepalive failed:', e.message);
+                }
+            }, 1000);
 
             updateUI('connected');
         }
