@@ -55,10 +55,14 @@
 
     <script>
         // ESP32側のNimBLE設定に合わせて調整
-        const UUID_SERVICE = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
-        const UUID_WEIGHT  = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
-        const UUID_COMMAND = 'd1159495-2c81-4328-8686-e26a4c2a4915';
+//        const UUID_SERVICE = '4fafc201-1fb5-459e-8fcc-c5c9c331914b';
+//        const UUID_WEIGHT  = 'beb5483e-36e1-4688-b7f5-ea07361b26a8';
+//        const UUID_COMMAND = 'd1159495-2c81-4328-8686-e26a4c2a4915';
 
+        // gatt_svc.c の NUS (Nordic UART Service) に対応
+        const UUID_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';  // NUS Service
+        const UUID_WEIGHT  = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';  // NUS TX: デバイス→ブラウザ (Notify)
+        const UUID_COMMAND = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';  // NUS RX: ブラウザ→デバイス (Write)
         let bleCharCommand;
 
         document.getElementById('btnConnect').onclick = async () => {
