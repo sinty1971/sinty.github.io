@@ -35,6 +35,7 @@
 
                     <div class="mt-4 d-grid gap-3">
                         <button class="btn btn-primary btn-lg py-3 rounded-pill" id="btnConnect">Connect via Bluetooth</button>
+                        <button class="btn btn-outline-danger py-2 rounded-pill" id="btnDisconnect" style="display:none">Disconnect</button>
                         <div class="row g-2">
                             <div class="col-6">
                                 <button class="btn btn-outline-secondary py-2 rounded-pill w-100" id="btnZero" disabled>Zero (Z)</button>
@@ -67,7 +68,32 @@
         let bleDevice       = null;
         let bleCharCommand  = null;
         let reconnectTimer  = null;
-        let isReconnecting  = false;
+        let wakeLock        = null;
+
+        /* Screen Wake Lock: スクリーンオフによる BLE スロットルを防ぐ */
+        async function acquireWakeLock() {
+            if (!('wakeLock' in navigator)) return;
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                wakeLock.addEventListener('release', () => { wakeLock = null; });
+            } catch (e) {
+                console.warn('Wake Lock denied:', e);
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        }
+
+        /*
+         * Page Visibility: タブをフォアグラウンドに戻したとき
+         * Wake Lock の再取得 + 切断中なら自動再接続をトリガー
+         */
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState !== 'visible') return;
+            if (wakeLock === null && bleDevice) await acquireWakeLock();
+            if (bleDevice && !bleDevice.gatt.connected) onDisconnected();
+        });
 
         async function connectToDevice(device) {
             const server  = await device.gatt.connect();
@@ -82,6 +108,7 @@
             };
 
             bleCharCommand = await service.getCharacteristic(UUID_COMMAND);
+            await acquireWakeLock(); // スクリーンオフによる BLE スロットルを防ぐ
             updateUI('connected');
         }
 
@@ -117,33 +144,37 @@
             }
         };
 
-        document.getElementById('btnConnect').addEventListener('dblclick', () => {
-            // 手動切断: ダブルクリックで切断してデバイス選択に戻る
+        document.getElementById('btnDisconnect').onclick = () => {
             if (bleDevice) {
                 bleDevice.removeEventListener('gattserverdisconnected', onDisconnected);
                 if (bleDevice.gatt.connected) bleDevice.gatt.disconnect();
                 bleDevice = null;
                 bleCharCommand = null;
                 clearTimeout(reconnectTimer);
+                releaseWakeLock();
                 updateUI('disconnected');
             }
-        });
+        };
 
         function updateUI(state) {
-            const status  = document.getElementById('connStatus');
-            const btnConn = document.getElementById('btnConnect');
+            const status    = document.getElementById('connStatus');
+            const btnConn   = document.getElementById('btnConnect');
+            const btnDisc   = document.getElementById('btnDisconnect');
             if (state === 'connected') {
-                status.innerText   = 'Connected';
-                status.className   = 'badge rounded-pill bg-success';
-                btnConn.style.display = 'none';
+                status.innerText        = 'Connected';
+                status.className        = 'badge rounded-pill bg-success';
+                btnConn.style.display   = 'none';
+                btnDisc.style.display   = 'block';
             } else if (state === 'reconnecting') {
-                status.innerText   = 'Reconnecting...';
-                status.className   = 'badge rounded-pill bg-warning text-dark';
-                btnConn.style.display = 'none';
+                status.innerText        = 'Reconnecting...';
+                status.className        = 'badge rounded-pill bg-warning text-dark';
+                btnConn.style.display   = 'none';
+                btnDisc.style.display   = 'block';
             } else {
-                status.innerText   = 'Disconnected';
-                status.className   = 'badge rounded-pill bg-light text-dark border';
-                btnConn.style.display = 'block';
+                status.innerText        = 'Disconnected';
+                status.className        = 'badge rounded-pill bg-light text-dark border';
+                btnConn.style.display   = 'block';
+                btnDisc.style.display   = 'none';
             }
             const ok = (state === 'connected');
             document.getElementById('btnZero').disabled = !ok;
